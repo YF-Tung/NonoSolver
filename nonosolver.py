@@ -50,8 +50,31 @@ def is_possible(current, guess):
 
 
 def parse_cons_file(filename):
+    def correct_vals(vals, N):
+        if len(vals) == 0:
+            return vals
+        val = vals[0]
+        if val > N:
+            s = str(val)
+            if len(s) >= 3:
+                s1, s2 = s[0:2], s[2:]
+                if int(s1) > N:
+                    s1, s2 = s[0], s[1:]
+            else:
+                s1, s2 = s[0], s[1:]
+
+            v1, v2 = int(s1), int(s2)
+            vals[0] = v2
+            return [v1] + correct_vals(vals, N)
+        else:
+            return [val] + correct_vals(vals[1:], N)
+
+
     with open(filename) as fin:
-        return [[int(x) for x in line.strip().split()] for line in fin]
+        rv = [[int(x) for x in line.strip().split()] for line in fin]
+    rv = [vals for vals in rv if len(vals) > 0]
+    rv = [correct_vals(vals, len(rv)) for vals in rv]
+    return rv
 
 def init():
     global N, o_list, x_list
@@ -73,7 +96,14 @@ def pprint_arr(board, id, r_or_c):
 
 def pretty(dense, fat=False):
     if fat:
-        return '| ' + ' | '.join(dense) + ' |'
+        rv = '|'
+        while len(dense) != 0:
+            assert (len(dense) >= 5)
+            for i in range(4):
+                rv += ' ' + dense[i] + '  '
+            rv += ' ' + dense[4] + ' |'
+            dense = dense[5:]
+        return rv
     else:
         return '|' + ''.join(dense) + '|'
 
@@ -126,12 +156,16 @@ def show_status(board, no_new_line=True):
 
 def pretty_print_board(board):
     global N
-    border_line = '+' + ''.join(['-'] * (4 * N - 1)) + '+'
-    middle_line = '---'.join(['+'] * (N + 1))
-    print (border_line)
+    assert (N % 5 == 0)
+    middle_line = '+                   ' * int(N/5) + '+'
+    border_line = '---'.join(['+'] * (N + 1))
+    print(border_line)
     for i, row in enumerate(board):
         if i != 0:
-            print(middle_line)
+            if i % 5 == 0:
+                print(border_line)
+            else:
+                print(middle_line)
         pprint(row, fat=True)
     print (border_line)
 
@@ -172,11 +206,6 @@ def solve(col_cons, row_cons, _N):
         #show_status(board)
 
         #show_status(board)
-    print()
-    print ('+' + ''.join(['-']*N) + '+')
-    for row in board:
-        pprint(row)
-    print ('+' + ''.join(['-']*N) + '+')
     pretty_print_board(board)
 
 
