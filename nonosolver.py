@@ -2,7 +2,7 @@
 
 import sys
 
-N = 15
+N = None
 o_list = []
 x_list = []
 
@@ -30,6 +30,7 @@ def partition(n, k, partial):
 
 def generate_guess_by_partition(label, partition):
     global N
+    global GUESS_CNT
     assert(sum(label) + len(label) + sum(partition) == (N + 1))
     assert(len(partition) == len(label) + 1)
     first, partition = partition[0], partition[1:]
@@ -50,6 +51,7 @@ def is_possible(current, guess):
 
 
 def parse_cons_file(filename):
+    global N
     def correct_vals(vals, N):
         if len(vals) == 0:
             return vals
@@ -74,11 +76,11 @@ def parse_cons_file(filename):
         rv = [[int(x) for x in line.strip().split()] for line in fin]
     rv = [vals for vals in rv if len(vals) > 0]
     rv = [correct_vals(vals, len(rv)) for vals in rv]
+    N = len(rv)
     return rv
 
 def init():
     global N, o_list, x_list
-    N = 15
     for i in range(N+1):
         o_list.append(['o' for _ in range(i)])
     for i in range(N+1):
@@ -111,11 +113,8 @@ def pretty(dense, fat=False):
 def guess_aggregate(valid_guess_iterable):
     global N
 
-    valid_guess_iterable = list(valid_guess_iterable)
-    #print (valid_guess_iterable)
-    valid_guess_iterable = (x for x in valid_guess_iterable)
-
     aggr = next(valid_guess_iterable).copy()
+    cnt = 0
     for guess in valid_guess_iterable:
         aggr = ['?' if a != g else a for a, g in zip(aggr, guess)]
 
@@ -138,20 +137,33 @@ def get_current_col(board, col_id):
     return [row[col_id] for row in board]
 
 
-def show_status(board, no_new_line=True):
+LAST_PRINT_LEN = 0
+def show_status(board, arr1, arr2, no_new_line=True):
+    global LAST_PRINT_LEN
     def show(s):
+        global LAST_PRINT_LEN
         if no_new_line:
-            sys.stdout.write('\r' + ''.join(s))
+            print_len = len(s)
+            if print_len < LAST_PRINT_LEN:
+                d = LAST_PRINT_LEN - print_len
+                s += ' ' * d + '\b' * d
+            LAST_PRINT_LEN = print_len
+            sys.stdout.write('\r' + s)
         else:
-            print (''.join(s))
+            print (s)
     total = len(board)*len(board)
     unsolved = sum(len([1 for v in row if v == '?']) for row in board)
     display_len = 40
+
+    postfix = ', ' + str(sum(arr1)) + '/' + str(len(arr1)) \
+            + ', ' + str(sum(arr2)) + '/' + str(len(arr2))
+
+
     if unsolved == 0:
-        show(['o'] * display_len)
+        show(''.join(['='] * display_len) + postfix)
     else:
         unsolved_len = max(1, int(1.0 * display_len * unsolved / total))
-        show(['o'] * (display_len - unsolved_len) + ['?'] * unsolved_len)
+        show(''.join(['='] * (display_len - unsolved_len) + ['-'] * unsolved_len) + postfix)
 
 
 def pretty_print_board(board):
@@ -184,7 +196,11 @@ def solve(col_cons, row_cons, _N):
 
     while any(should_try_col) or any(should_try_row):
         if any(should_try_col):
-            col_id = should_try_col.index(True)
+            col_id, min_par = -1, 1e8
+            for i in range(N):
+                if should_try_col[i] and len(col_cons[i]) < min_par:
+                    col_id = i
+
             current = get_current_col(board, col_id)
             after = solve_arr(col_cons[col_id], current)
             for i in range(N):
@@ -195,7 +211,11 @@ def solve(col_cons, row_cons, _N):
 
 
         if any(should_try_row):
-            row_id = should_try_row.index(True)
+            row_id, min_par = -1, 1e8
+            for i in range(N):
+                if should_try_row[i] and len(row_cons[i]) < min_par:
+                    row_id = i
+
             current = get_current_row(board, row_id)
             after = solve_arr(row_cons[row_id], current)
             for i in range(N):
@@ -205,17 +225,18 @@ def solve(col_cons, row_cons, _N):
             should_try_row[row_id] = False
         #show_status(board)
 
-        #show_status(board)
+        if N >= 20:
+            # May be slow
+            show_status(board, should_try_col, should_try_row)
+    print()
     pretty_print_board(board)
 
 
 def main():
-    init()
     col_cons_file = 'col_cons.txt'
     row_cons_file = 'row_cons.txt'
-    label = [3, 6]
-    current = ['o','?','?','?','?','?','?', ' ', '?','?','?','?','o','?','?']
     col_cons, row_cons = parse_cons_file(col_cons_file), parse_cons_file(row_cons_file)
+    init()
     solve(col_cons, row_cons, len(col_cons))
 
 
