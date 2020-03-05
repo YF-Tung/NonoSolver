@@ -87,8 +87,8 @@ def init():
         x_list.append([' ' for _ in range(i)])
 
 
-def pprint(dense, fat=False):
-    print (pretty(dense, fat))
+def pprint(dense, fat=False, convert=False):
+    print (pretty(dense, fat, convert))
 
 def pprint_arr(board, id, r_or_c):
     if r_or_c == 'r':
@@ -96,14 +96,22 @@ def pprint_arr(board, id, r_or_c):
     else:
         pprint(get_current_row(board, id))
 
-def pretty(dense, fat=False):
+def pretty(dense, fat=False, convert=False):
+    def c(x):
+        if convert:
+            if x == '?':
+                return ' '
+            elif x == ' ':
+                return 'x'
+        return x
+
     if fat:
         rv = '|'
         while len(dense) != 0:
             assert (len(dense) >= 5)
             for i in range(4):
-                rv += ' ' + dense[i] + '  '
-            rv += ' ' + dense[4] + ' |'
+                rv += ' ' + c(dense[i]) + '  '
+            rv += ' ' + c(dense[4]) + ' |'
             dense = dense[5:]
         return rv
     else:
@@ -166,7 +174,7 @@ def show_status(board, arr1, arr2, no_new_line=True):
         show(''.join(['='] * (display_len - unsolved_len) + ['-'] * unsolved_len) + postfix)
 
 
-def pretty_print_board(board):
+def pretty_print_board(board, convert=False):
     global N
     assert (N % 5 == 0)
     middle_line = '+                   ' * int(N/5) + '+'
@@ -178,7 +186,7 @@ def pretty_print_board(board):
                 print(border_line)
             else:
                 print(middle_line)
-        pprint(row, fat=True)
+        pprint(row, fat=True, convert=convert)
     print (border_line)
 
 
@@ -194,42 +202,47 @@ def solve(col_cons, row_cons, _N):
     should_try_col = [True] * N
     should_try_row = [True] * N
 
-    while any(should_try_col) or any(should_try_row):
-        if any(should_try_col):
-            col_id, min_par = -1, 1e8
-            for i in range(N):
-                if should_try_col[i] and len(col_cons[i]) < min_par:
-                    col_id = i
+    try:
+        while any(should_try_col) or any(should_try_row):
+            if any(should_try_col):
+                col_id, min_par = -1, 1e8
+                for i in range(N):
+                    if should_try_col[i] and len(col_cons[i]) < min_par:
+                        col_id = i
 
-            current = get_current_col(board, col_id)
-            after = solve_arr(col_cons[col_id], current)
-            for i in range(N):
-                if current[i] != after[i]:
-                    board[i][col_id] = after[i]
-                    should_try_row[i] = True
-            should_try_col[col_id] = False
+                current = get_current_col(board, col_id)
+                after = solve_arr(col_cons[col_id], current)
+                for i in range(N):
+                    if current[i] != after[i]:
+                        board[i][col_id] = after[i]
+                        should_try_row[i] = True
+                should_try_col[col_id] = False
 
 
-        if any(should_try_row):
-            row_id, min_par = -1, 1e8
-            for i in range(N):
-                if should_try_row[i] and len(row_cons[i]) < min_par:
-                    row_id = i
+            if any(should_try_row):
+                row_id, min_par = -1, 1e8
+                for i in range(N):
+                    if should_try_row[i] and len(row_cons[i]) < min_par:
+                        row_id = i
 
-            current = get_current_row(board, row_id)
-            after = solve_arr(row_cons[row_id], current)
-            for i in range(N):
-                if current[i] != after[i]:
-                    board[row_id][i] = after[i]
-                    should_try_col[i] = True
-            should_try_row[row_id] = False
-        #show_status(board)
+                current = get_current_row(board, row_id)
+                after = solve_arr(row_cons[row_id], current)
+                for i in range(N):
+                    if current[i] != after[i]:
+                        board[row_id][i] = after[i]
+                        should_try_col[i] = True
+                should_try_row[row_id] = False
+            #show_status(board)
 
-        if N >= 20:
-            # May be slow
-            show_status(board, should_try_col, should_try_row)
-    print()
-    pretty_print_board(board)
+            if N >= 20:
+                # May be slow
+                show_status(board, should_try_col, should_try_row)
+        print()
+        pretty_print_board(board)
+    except StopIteration:
+        print()
+        print('Failed to solve all entries! Only shows partial result.')
+        pretty_print_board(board, convert=True)
 
 
 def main():
